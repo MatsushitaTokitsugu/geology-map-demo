@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Geology Map Sample</title>
+  <style>
+    html, body { height: 100%; margin: 0; padding: 0; }
+    #map { height: 50%; width: 100%; border: 1px solid red; }
+    #pano { height: 50%; width: 100%; border: 1px solid blue; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <div id="pano"></div>
+  <script>
+    function initMap() {
+      console.log("initMap called");
+      try {
+        const map = new google.maps.Map(document.getElementById("map"), {
+          center: { lat: 35.6762, lng: 139.6503 },
+          zoom: 10,
+          streetViewControl: true
+        });
+        console.log("Map initialized");
+
+        const panorama = new google.maps.StreetViewPanorama(
+          document.getElementById("pano"), {
+            position: { lat: 35.6762, lng: 139.6503 },
+            pov: { heading: 165, pitch: 0 },
+            visible: true
+          }
+        );
+        console.log("Panorama initialized");
+        map.setStreetView(panorama);
+
+        const geologyData = {
+          "type": "FeatureCollection",
+          "features": [
+            {
+              "type": "Feature",
+              "properties": { "name": "Granite", "color": "rgba(255, 0, 0, 0.5)" },
+              "geometry": {
+                "type": "Polygon",
+                "coordinates": [[
+                  [139.64, 35.67], [139.66, 35.67],
+                  [139.66, 35.69], [139.64, 35.69],
+                  [139.64, 35.67]
+                ]]
+              }
+            }
+          ]
+        };
+        map.data.addGeoJson(geologyData);
+        console.log("GeoJSON added");
+        map.data.setStyle(feature => ({
+          fillColor: feature.getProperty("color"),
+          strokeWeight: 1
+        }));
+
+        let markers = [];
+        panorama.addListener("position_changed", () => {
+          markers.forEach(marker => marker.setMap(null));
+          markers = [];
+          const pos = panorama.getPosition();
+          geologyData.features.forEach(feature => {
+            const coords = feature.geometry.coordinates[0];
+            const bounds = new google.maps.LatLngBounds();
+            coords.forEach(coord => bounds.extend({ lat: coord[1], lng: coord[0] }));
+            if (bounds.contains(pos)) {
+              const marker = new google.maps.Marker({
+                position: pos,
+                map: panorama,
+                title: feature.properties.name,
+                label: feature.properties.name
+              });
+              markers.push(marker);
+            }
+          });
+        });
+      } catch (e) {
+        console.error("Error in initMap:", e);
+      }
+    }
+  </script>
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC43e5KVYktzDMcMcHqKKn6BnLQAyEAG38&callback=initMap" async defer></script>
+</body>
+</html>
